@@ -98,11 +98,17 @@ else()
 	pkg_check_modules(libusb-1.0 REQUIRED IMPORTED_TARGET libusb-1.0)
 endif()
 pkg_check_modules(libzstd REQUIRED IMPORTED_TARGET libzstd)
-
+set(Protobuf_USE_STATIC_LIBS ON)
 find_package(Protobuf CONFIG)
 find_package(Protobuf REQUIRED)
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 find_package(Threads REQUIRED)
+
+if(Protobuf_PROTOC_EXECUTABLE)
+  set_target_properties(protobuf::protoc PROPERTIES
+    IMPORTED_LOCATION_RELEASE "${Protobuf_PROTOC_EXECUTABLE}"
+  )
+endif()
 
 check_symbol_exists(strlcpy "string.h" HAVE_STRLCPY)
 check_symbol_exists(reallocarray "stdlib.h" HAVE_REALLOCARRAY)
