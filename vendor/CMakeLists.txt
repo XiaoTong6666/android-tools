@@ -88,7 +88,9 @@ pkg_check_modules(libbrotlicommon REQUIRED IMPORTED_TARGET libbrotlicommon)
 pkg_check_modules(libbrotlidec REQUIRED IMPORTED_TARGET libbrotlidec)
 pkg_check_modules(libbrotlienc REQUIRED IMPORTED_TARGET libbrotlienc)
 pkg_check_modules(liblz4 REQUIRED IMPORTED_TARGET liblz4)
-pkg_check_modules(libpcre2-8 REQUIRED IMPORTED_TARGET libpcre2-8)
+if(NOT ANDROID_TOOLS_BUILD_ONLY_ADB)
+	pkg_check_modules(libpcre2-8 REQUIRED IMPORTED_TARGET libpcre2-8)
+endif()
 if(ANDROID_TOOLS_USE_BUNDLED_LIBUSB)
 	include(CMakeLists.libusb.txt)
 	if(ANDROID_TOOLS_LIBUSB_ENABLE_UDEV)
@@ -96,17 +98,33 @@ if(ANDROID_TOOLS_USE_BUNDLED_LIBUSB)
 	endif()
 else()
 	pkg_check_modules(libusb-1.0 REQUIRED IMPORTED_TARGET libusb-1.0)
+	set(ANDROID_TOOLS_LIBUSB_INCLUDE_DIRS ${libusb-1.0_INCLUDE_DIRS})
 endif()
 pkg_check_modules(libzstd REQUIRED IMPORTED_TARGET libzstd)
 set(Protobuf_USE_STATIC_LIBS ON)
-find_package(Protobuf CONFIG)
-find_package(Protobuf REQUIRED)
+set(protobuf_MODULE_COMPATIBLE ON CACHE BOOL "Enable FindProtobuf compatibility helpers" FORCE)
+find_package(Protobuf CONFIG REQUIRED)
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 find_package(Threads REQUIRED)
+
+if(NOT Protobuf_LIBRARIES AND TARGET protobuf::libprotobuf)
+	set(Protobuf_LIBRARIES protobuf::libprotobuf)
+endif()
+
+if(NOT Protobuf_INCLUDE_DIRS AND TARGET protobuf::libprotobuf)
+	get_target_property(Protobuf_INCLUDE_DIRS protobuf::libprotobuf INTERFACE_INCLUDE_DIRECTORIES)
+endif()
+
+set(PROTOBUF_INCLUDE_DIRS ${Protobuf_INCLUDE_DIRS})
+
+if(Protobuf_PROTOC_EXECUTABLE AND NOT TARGET protobuf::protoc)
+	add_executable(protobuf::protoc IMPORTED GLOBAL)
+endif()
 
 if(Protobuf_PROTOC_EXECUTABLE)
   set_target_properties(protobuf::protoc PROPERTIES
     IMPORTED_LOCATION_RELEASE "${Protobuf_PROTOC_EXECUTABLE}"
+    IMPORTED_LOCATION "${Protobuf_PROTOC_EXECUTABLE}"
   )
 endif()
 
@@ -118,42 +136,50 @@ include_directories(${CMAKE_CURRENT_BINARY_DIR})
 
 include(CMakeLists.libbase.txt)
 include(CMakeLists.adb.txt)
-include(CMakeLists.sparse.txt)
-include(CMakeLists.fastboot.txt)
-include(CMakeLists.f2fstools.txt)
-include(CMakeLists.mke2fs.txt)
-include(CMakeLists.partition.txt)
-include(CMakeLists.mkbootimg.txt)
-include(CMakeLists.libufdt.txt)
-include(CMakeLists.avb.txt)
+if(NOT ANDROID_TOOLS_BUILD_ONLY_ADB)
+	include(CMakeLists.sparse.txt)
+	include(CMakeLists.fastboot.txt)
+	include(CMakeLists.f2fstools.txt)
+	include(CMakeLists.mke2fs.txt)
+	include(CMakeLists.partition.txt)
+	include(CMakeLists.mkbootimg.txt)
+	include(CMakeLists.libufdt.txt)
+	include(CMakeLists.avb.txt)
+endif()
 
 # Targets which should be installed by `make install`.
-install(TARGETS
-	"${ANDROID_MKE2FS_NAME}"
-	adb
-	append2simg
-	fastboot
-	img2simg
-	lpadd
-	lpdump
-	lpflash
-	lpmake
-	lpunpack
-	make_f2fs
-	sload_f2fs
-	simg2img
-	ext2simg
-	DESTINATION bin)
-
-if(NOT APPLE)
+if(ANDROID_TOOLS_BUILD_ONLY_ADB)
+	install(TARGETS adb DESTINATION bin)
+else()
 	install(TARGETS
-		e2fsdroid
+		"${ANDROID_MKE2FS_NAME}"
+		adb
+		append2simg
+		fastboot
+		img2simg
+		lpadd
+		lpdump
+		lpflash
+		lpmake
+		lpunpack
+		make_f2fs
+		sload_f2fs
+		simg2img
+		ext2simg
 		DESTINATION bin)
+
+	if(NOT APPLE)
+		install(TARGETS
+			e2fsdroid
+			DESTINATION bin)
+	endif()
 endif()
 
 # Install common completion files.
 install(FILES adb/adb.bash RENAME adb DESTINATION "${COMPLETION_COMMON_DIR}")
-install(FILES core/fastboot/fastboot.bash RENAME fastboot DESTINATION "${COMPLETION_COMMON_DIR}")
+if(NOT ANDROID_TOOLS_BUILD_ONLY_ADB)
+	install(FILES core/fastboot/fastboot.bash RENAME fastboot DESTINATION "${COMPLETION_COMMON_DIR}")
+endif()
 
 # Install license files.
 # Disabled for now, see https://github.com/nmeum/android-tools/issues/30#issuecomment-855365636

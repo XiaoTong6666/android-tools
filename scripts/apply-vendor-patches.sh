@@ -9,7 +9,7 @@ apply_submodule_patch() {
     local strip_components=$3
 
     if git -C "${ROOT_DIR}/${submodule_path}" apply --check "-p${strip_components}" "${ROOT_DIR}/${patch_path}" >/dev/null 2>&1; then
-        git -C "${ROOT_DIR}/${submodule_path}" apply -3 --index "-p${strip_components}" "${ROOT_DIR}/${patch_path}"
+        git -C "${ROOT_DIR}/${submodule_path}" apply "-p${strip_components}" "${ROOT_DIR}/${patch_path}"
         return
     fi
 
@@ -22,7 +22,17 @@ apply_submodule_patch() {
     return 1
 }
 
+reset_submodule_to_head() {
+    local submodule_path=$1
+
+    git -C "${ROOT_DIR}/${submodule_path}" reset --hard HEAD >/dev/null
+    git -C "${ROOT_DIR}/${submodule_path}" clean -fd >/dev/null
+}
+
 git -C "${ROOT_DIR}" submodule update --init vendor/adb vendor/core
 
-apply_submodule_patch vendor/adb patches/vendor-adb/fb3e081c-termux-adb.patch 3
-apply_submodule_patch vendor/core patches/vendor-core/fb3e081c-termux-fastboot.patch 3
+reset_submodule_to_head vendor/adb
+reset_submodule_to_head vendor/core
+
+apply_submodule_patch vendor/adb patches/adb/1000-termux-adb.patch 3
+apply_submodule_patch vendor/core patches/core/1000-termux-fastboot.patch 3

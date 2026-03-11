@@ -12,9 +12,16 @@ option(ANDROID_TOOLS_PATCH_VENDOR "Patch vendor projects using patches directory
 option(ANDROID_TOOLS_USE_BUNDLED_FMT "Use bundled fmt library instead of system provided one" OFF)
 option(ANDROID_TOOLS_USE_BUNDLED_LIBUSB "Use bundled libusb library instead of system provided one" OFF)
 option(ANDROID_TOOLS_LIBUSB_ENABLE_UDEV "Enable udev for device enumeration and hotplug support" OFF)
+option(ANDROID_TOOLS_TERMUX_ADB "Apply the Termux adb/fastboot hooks and link libtermuxadb" OFF)
+option(ANDROID_TOOLS_BUILD_ONLY_ADB "Only configure the adb target and its direct dependencies" OFF)
+set(ANDROID_TOOLS_TERMUX_LINK_DIR "" CACHE PATH "Additional library search directory for Termux adb builds")
 
 # Install bash/zsh completion files.
-set(COMPLETION_COMMON_DIR "${CMAKE_INSTALL_FULL_DATADIR}/android-tools/completions")
+if(ANDROID_TOOLS_TERMUX_ADB)
+	set(COMPLETION_COMMON_DIR "${CMAKE_INSTALL_FULL_DATADIR}/termux-adb/completions")
+else()
+	set(COMPLETION_COMMON_DIR "${CMAKE_INSTALL_FULL_DATADIR}/android-tools/completions")
+endif()
 add_subdirectory(completions)
 
 # Android provides it's own version of mke2fs which is incompatible with
