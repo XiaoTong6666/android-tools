@@ -39,4 +39,5 @@ apply_submodule_patch vendor/adb "${ROOT_DIR}/patches/adb/1001-add-mdns-disabled
 apply_submodule_patch vendor/adb "${ROOT_DIR}/patches/adb/1002-gate-openscreen-header-when-mdns-disabled.patch" 3
 apply_submodule_patch vendor/adb "${ROOT_DIR}/patches/adb/1003-add-explicit-mdns-std-includes.patch" 3
 apply_submodule_patch vendor/adb "${ROOT_DIR}/patches/adb/1004-drop-block-standard-layout-assert.patch" 3
+apply_submodule_patch vendor/adb "${ROOT_DIR}/patches/adb/1005-avoid-internal-sys-cdefs-header.patch" 3
 apply_submodule_patch vendor/core "${ROOT_DIR}/patches/core/1000-termux-fastboot.patch" 3

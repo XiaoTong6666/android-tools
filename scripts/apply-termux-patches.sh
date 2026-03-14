@@ -50,6 +50,8 @@ require_repo_paths vendor/adb \
 
 apply_submodule_patch vendor/core "${PATCH_ROOT}/vendor-core/0001-guard-fdsan-for-api-29.patch" 1
 apply_submodule_patch vendor/libbase "${PATCH_ROOT}/vendor-libbase/0001-guard-fdsan-for-api-29.patch" 1
+apply_submodule_patch vendor/libbase "${PATCH_ROOT}/vendor-libbase/0002-avoid-private-property-serial-apis-before-30.patch" 1
 apply_submodule_patch vendor/libziparchive "${PATCH_ROOT}/vendor-libziparchive/0001-guard-fdsan-for-api-29.patch" 1
 apply_submodule_patch vendor/logging "${PATCH_ROOT}/vendor-logging/0001-lower-liblog-api-gates.patch" 1
 apply_submodule_patch vendor/logging "${PATCH_ROOT}/vendor-logging/0002-disable-android-logd-backend.patch" 1
+apply_submodule_patch vendor/logging "${PATCH_ROOT}/vendor-logging/0003-avoid-private-property-serial-apis-before-30.patch" 1

@@ -1,0 +1,196 @@
+name: nightly-adb
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - master
+      - main
+
+permissions:
+  contents: write
+
+concurrency:
+  group: nightly-adb-release
+  cancel-in-progress: true
+
+env:
+  ABSL_REF: 842679cdbb5b43dac6c57a69d7678e764cf25ae6
+  BROTLI_REF: 0ed4268a4401abcb4472096340477cf4af7d1a2b
+  LZ4_REF: 5c4c1fb2354133e1f3b087a341576985f8114bd5
+  PCRE2_REF: 123424f8a2267aa12ef819c64744b9cea934e414
+  PROTOBUF_REF: 627c33533d639160298edd33c5d7ebca9df169dd
+  ZSTD_REF: d7ee3207cc0db53f78fc6a69babc80747b1b7658
+  ANDROID_NDK_VERSION: 27.2.12479018
+
+jobs:
+  build-adb:
+    name: build-${{ matrix.abi }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        abi:
+          - arm64-v8a
+          - armeabi-v7a
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: false
+
+      - name: Install host build dependencies
+        run: |
+          sudo apt-get update
+          DEBIAN_FRONTEND=noninteractive sudo apt-get install -yq \
+            clang cmake git ninja-build pkg-config
+
+      - name: Fetch vendor submodules with retries
+        run: |
+          set -euo pipefail
+
+          cleanup_submodules() {
+            git submodule deinit -f --all >/dev/null 2>&1 || true
+            rm -rf .git/modules/vendor .git/modules/boringssl .git/modules/core .git/modules/e2fsprogs \
+              .git/modules/extras .git/modules/f2fs-tools .git/modules/selinux vendor
+          }
+
+          for attempt in 1 2 3; do
+            echo "Fetching vendor submodules (attempt ${attempt}/3)"
+            git submodule sync --recursive
+            if git submodule update --init --force --depth=1 --recursive; then
+              exit 0
+            fi
+
+            cleanup_submodules
+            sleep $((attempt * 5))
+          done
+
+          echo "Failed to fetch vendor submodules after 3 attempts." >&2
+          exit 1
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android,armv7-linux-androideabi
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android NDK
+        run: |
+          yes | sdkmanager --licenses >/dev/null || true
+          yes | sdkmanager --install "ndk;${ANDROID_NDK_VERSION}"
+
+      - name: Fetch pinned android-deps sources
+        run: |
+          DEPS_ROOT="${GITHUB_WORKSPACE}/deps/android-deps"
+          mkdir -p "${DEPS_ROOT}"
+
+          fetch_dep() {
+            local name=$1
+            local url=$2
+            local ref=$3
+            local path="${DEPS_ROOT}/${name}"
+
+            git init "${path}"
+            git -C "${path}" remote add origin "${url}"
+            git -C "${path}" fetch --depth 1 origin "${ref}"
+            git -C "${path}" checkout --detach FETCH_HEAD
+          }
+
+          fetch_dep abseil-cpp https://github.com/abseil/abseil-cpp.git "${ABSL_REF}"
+          fetch_dep brotli https://github.com/google/brotli.git "${BROTLI_REF}"
+          fetch_dep lz4 https://github.com/lz4/lz4.git "${LZ4_REF}"
+          fetch_dep pcre2 https://github.com/PCRE2Project/pcre2.git "${PCRE2_REF}"
+          fetch_dep protobuf https://github.com/protocolbuffers/protobuf.git "${PROTOBUF_REF}"
+          fetch_dep zstd https://github.com/facebook/zstd.git "${ZSTD_REF}"
+
+      - name: Build termux adb
+        env:
+          ANDROID_TOOLS_DEPS_ROOT: ${{ github.workspace }}/deps/android-deps
+          USE_CCACHE: "0"
+        run: |
+          ./scripts/build-termux-adb.sh "${{ matrix.abi }}"
+
+      - name: Stage release artifact
+        run: |
+          mkdir -p release
+          cp "out/termux-adb/${{ matrix.abi }}/adb" "release/adb-${{ matrix.abi }}"
+
+      - name: Upload release artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: adb-${{ matrix.abi }}
+          path: release/adb-${{ matrix.abi }}
+          if-no-files-found: error
+
+  publish-nightly:
+    name: publish-nightly
+    runs-on: ubuntu-latest
+    needs: build-adb
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: release-artifacts
+
+      - name: Assemble release payload
+        env:
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          mkdir -p dist
+          cp release-artifacts/adb-arm64-v8a/adb-arm64-v8a dist/adb-arm64-v8a
+          cp release-artifacts/adb-armeabi-v7a/adb-armeabi-v7a dist/adb-armeabi-v7a
+
+          (
+            cd dist
+            sha256sum adb-arm64-v8a adb-armeabi-v7a > SHA256SUMS
+          )
+
+          cat > dist/nightly.json <<EOF
+          {
+            "tag": "nightly",
+            "repository": "${{ github.repository }}",
+            "commit": "${{ github.sha }}",
+            "ref_name": "${{ github.ref_name }}",
+            "workflow": "${{ github.workflow }}",
+            "run_id": "${{ github.run_id }}",
+            "run_number": "${{ github.run_number }}",
+            "run_attempt": "${{ github.run_attempt }}",
+            "created_at_utc": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+            "run_url": "${RUN_URL}",
+            "assets": {
+              "arm64-v8a": "adb-arm64-v8a",
+              "armeabi-v7a": "adb-armeabi-v7a",
+              "sha256": "SHA256SUMS"
+            }
+          }
+          EOF
+
+      - name: Move nightly tag
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -f nightly "${GITHUB_SHA}"
+          git push origin refs/tags/nightly --force
+
+      - name: Recreate nightly release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release view nightly >/dev/null 2>&1 && gh release delete nightly --yes || true
+          gh release create nightly \
+            dist/adb-arm64-v8a \
+            dist/adb-armeabi-v7a \
+            dist/SHA256SUMS \
+            dist/nightly.json \
+            --title "nightly" \
+            --notes "Automated nightly adb build for ${GITHUB_SHA}"

@@ -1,0 +1,64 @@
+diff --git a/liblog/properties.cpp b/liblog/properties.cpp
+index 8a8b443..629b282 100644
+--- a/liblog/properties.cpp
++++ b/liblog/properties.cpp
+@@ -63,7 +63,11 @@ struct cache_char {
+ };
+ 
+ static int check_cache(struct cache* cache) {
++#if __ANDROID_API__ >= 30
+   return cache->pinfo && __system_property_serial(cache->pinfo) != cache->serial;
++#else
++  return cache->pinfo != nullptr;
++#endif
+ }
+ 
+ #define BOOLEAN_TRUE 0xFF
+@@ -78,7 +82,11 @@ static void refresh_cache(struct cache_char* cache, const char* key) {
+       return;
+     }
+   }
++#if __ANDROID_API__ >= 30
+   cache->cache.serial = __system_property_serial(cache->cache.pinfo);
++#else
++  cache->cache.serial = 0;
++#endif
+   __system_property_read(cache->cache.pinfo, 0, buf);
+   switch (buf[0]) {
+     case 't':
+@@ -138,10 +146,15 @@ static int __android_log_level(const char* tag, size_t tag_len) {
+       }
+     }
+ 
++#if __ANDROID_API__ >= 30
+     current_global_serial = __system_property_area_serial();
+     if (current_global_serial != global_serial) {
+       global_change_detected = change_detected = true;
+     }
++#else
++    current_global_serial = 0;
++    global_change_detected = change_detected = true;
++#endif
+   }
+ 
+   if (tag_len != 0) {
+@@ -270,6 +283,11 @@ int __android_log_is_debuggable() {
+ }
+ 
+ int __android_log_security() {
++#if __ANDROID_API__ < 30
++  char value[PROP_VALUE_MAX] = {};
++  return __system_property_get("persist.logd.security", value) > 0 &&
++         (!strcasecmp(value, "true") || !strcmp(value, "1"));
++#else
+   static pthread_mutex_t security_lock = PTHREAD_MUTEX_INITIALIZER;
+   static cache_char security_prop = {{NULL, 0xFFFFFFFF}, BOOLEAN_FALSE};
+   static uint32_t security_serial = 0;
+@@ -294,6 +312,7 @@ int __android_log_security() {
+   pthread_mutex_unlock(&security_lock);
+ 
+   return res;
++#endif
+ }
+ 
+ #else

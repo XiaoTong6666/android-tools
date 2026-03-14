@@ -150,6 +150,7 @@ apply_host_patch() {
 
 trap cleanup_vendor_submodules EXIT
 
+apply_host_patch "${ROOT_DIR}/patches/adb/1005-avoid-internal-sys-cdefs-header.patch" 3
 apply_host_patch "${ROOT_DIR}/patches/adb/1001-add-mdns-disabled-stub.patch" 3
 apply_host_patch "${ROOT_DIR}/patches/adb/1002-gate-openscreen-header-when-mdns-disabled.patch" 3
 apply_host_patch "${ROOT_DIR}/patches/adb/1003-add-explicit-mdns-std-includes.patch" 3
