@@ -1,0 +1,38 @@
+From 7acb5365fa3c338133394bb4837f5f9fb8d9f74b Mon Sep 17 00:00:00 2001
+From: Codex <codex@openai.com>
+Date: Sat, 14 Mar 2026 18:00:00 +0800
+Subject: [PATCH] adb: gate openscreen mdns headers when disabled
+
+---
+ adb_mdns.h | 9 ++++++++-
+ 1 file changed, 8 insertions(+), 1 deletion(-)
+
+diff --git a/vendor/adb/adb_mdns.h b/vendor/adb/adb_mdns.h
+index e2da4b5..0000000 100644
+--- a/vendor/adb/adb_mdns.h
++++ b/vendor/adb/adb_mdns.h
+@@ -16,6 +16,7 @@
+ #pragma once
+ 
++#include <cstdint>
+ #include <functional>
+ #include <optional>
+ #include <string>
+ #include <string_view>
+@@ -49,6 +50,13 @@ extern const char* _Nonnull kADBDNSServiceTxtRecords[kNumADBDNSServices];
+ 
+ #if ADB_HOST
+-#include "client/openscreen/mdns_service_info.h"
++#if defined(ANDROID_TOOLS_DISABLE_MDNS)
++namespace mdns {
++struct ServiceInfo;
++}  // namespace mdns
++#else
++#include "client/openscreen/mdns_service_info.h"
++#endif
++
+ // ADB Secure DNS service interface. Used to query what ADB Secure DNS services have been
+ // resolved, and to run some kind of callback for each one.
+ using adb_secure_foreach_service_callback = std::function<void(const mdns::ServiceInfo& si)>;
+-- 
+2.49.0

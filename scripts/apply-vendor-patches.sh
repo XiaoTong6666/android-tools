@@ -8,12 +8,12 @@ apply_submodule_patch() {
     local patch_path=$2
     local strip_components=$3
 
-    if git -C "${ROOT_DIR}/${submodule_path}" apply --check "-p${strip_components}" "${ROOT_DIR}/${patch_path}" >/dev/null 2>&1; then
-        git -C "${ROOT_DIR}/${submodule_path}" apply "-p${strip_components}" "${ROOT_DIR}/${patch_path}"
+    if git -C "${ROOT_DIR}/${submodule_path}" apply --check "-p${strip_components}" "${patch_path}" >/dev/null 2>&1; then
+        git -C "${ROOT_DIR}/${submodule_path}" apply "-p${strip_components}" "${patch_path}"
         return
     fi
 
-    if git -C "${ROOT_DIR}/${submodule_path}" apply -R --check "-p${strip_components}" "${ROOT_DIR}/${patch_path}" >/dev/null 2>&1; then
+    if git -C "${ROOT_DIR}/${submodule_path}" apply -R --check "-p${strip_components}" "${patch_path}" >/dev/null 2>&1; then
         printf 'Skipping %s: already applied\n' "${patch_path}"
         return
     fi
@@ -34,5 +34,9 @@ git -C "${ROOT_DIR}" submodule update --init vendor/adb vendor/core
 reset_submodule_to_head vendor/adb
 reset_submodule_to_head vendor/core
 
-apply_submodule_patch vendor/adb patches/adb/1000-termux-adb.patch 3
-apply_submodule_patch vendor/core patches/core/1000-termux-fastboot.patch 3
+apply_submodule_patch vendor/adb "${ROOT_DIR}/patches/adb/1000-termux-adb.patch" 3
+apply_submodule_patch vendor/adb "${ROOT_DIR}/patches/adb/1001-add-mdns-disabled-stub.patch" 3
+apply_submodule_patch vendor/adb "${ROOT_DIR}/patches/adb/1002-gate-openscreen-header-when-mdns-disabled.patch" 3
+apply_submodule_patch vendor/adb "${ROOT_DIR}/patches/adb/1003-add-explicit-mdns-std-includes.patch" 3
+apply_submodule_patch vendor/adb "${ROOT_DIR}/patches/adb/1004-drop-block-standard-layout-assert.patch" 3
+apply_submodule_patch vendor/core "${ROOT_DIR}/patches/core/1000-termux-fastboot.patch" 3

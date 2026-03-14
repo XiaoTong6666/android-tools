@@ -1,0 +1,25 @@
+From 3f4d2ccbe20a8261c33fd68c81d9ddf6a7d84e20 Mon Sep 17 00:00:00 2001
+From: Codex <codex@openai.com>
+Date: Sat, 14 Mar 2026 18:20:00 +0800
+Subject: [PATCH] adb: add explicit mdns stdlib includes
+
+---
+ adb_mdns.cpp | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/vendor/adb/adb_mdns.cpp b/vendor/adb/adb_mdns.cpp
+index 5a58883..0000000 100644
+--- a/vendor/adb/adb_mdns.cpp
++++ b/vendor/adb/adb_mdns.cpp
+@@ -17,7 +17,9 @@
+ #include "adb_mdns.h"
+ 
+ #include <algorithm>
++#include <atomic>
+ #include <set>
++#include <cstring>
+ 
+ #include <android-base/stringprintf.h>
+ #include <android-base/strings.h>
+-- 
+2.49.0

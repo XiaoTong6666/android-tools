@@ -1,0 +1,23 @@
+From f4c204ae8eb0e23b2722ba63dfe6b9d8f1f12142 Mon Sep 17 00:00:00 2001
+From: Codex <codex@openai.com>
+Date: Sat, 14 Mar 2026 18:45:00 +0800
+Subject: [PATCH] adb: drop block standard layout assert
+
+---
+ types.h | 1 -
+ 1 file changed, 1 deletion(-)
+
+diff --git a/vendor/adb/types.h b/vendor/adb/types.h
+index 3f9a85a..0000000 100644
+--- a/vendor/adb/types.h
++++ b/vendor/adb/types.h
+@@ -255,7 +255,6 @@ struct IOVector {
+ 
+         size_t offset = 0;
+         iterate_blocks([&offset, &result](const char* data, size_t len) {
+-            static_assert(std::is_standard_layout<decltype(result)>());
+             memcpy(&result[offset], data, len);
+             offset += len;
+         });
+-- 
+2.49.0

@@ -1,0 +1,55 @@
+diff --git a/vendor/adb/client/mdns_disabled.cpp b/vendor/adb/client/mdns_disabled.cpp
+new file mode 100644
+index 0000000..9ae29be
+--- /dev/null
++++ b/vendor/adb/client/mdns_disabled.cpp
+@@ -0,0 +1,49 @@
++/*
++ * Minimal mDNS stubs for adb builds without mDNS transport support.
++ */
++
++#include "adb_mdns.h"
++
++#include <optional>
++#include <string>
++
++#include "transport.h"
++
++void init_mdns_transport_discovery() {}
++
++void mdns_cleanup() {}
++
++std::string mdns_check() {
++    return "mdns discovery unavailable in this build";
++}
++
++std::string mdns_list_discovered_services() {
++    return "";
++}
++
++std::optional<MdnsInfo> mdns_get_connect_service_info(const std::string&) {
++    return std::nullopt;
++}
++
++std::optional<MdnsInfo> mdns_get_pairing_service_info(const std::string&) {
++    return std::nullopt;
++}
++
++bool adb_secure_connect_by_service_name(const std::string&) {
++    return false;
++}
++
++bool using_bonjour(void) {
++    return false;
++}
++
++AdbMdnsResponderFuncs StartMdnsResponderDiscovery() {
++    return AdbMdnsResponderFuncs{
++            .mdns_check = mdns_check,
++            .mdns_list_discovered_services = mdns_list_discovered_services,
++            .mdns_get_connect_service_info = mdns_get_connect_service_info,
++            .mdns_get_pairing_service_info = mdns_get_pairing_service_info,
++            .mdns_cleanup = mdns_cleanup,
++            .adb_secure_connect_by_service_name = adb_secure_connect_by_service_name,
++    };
++}

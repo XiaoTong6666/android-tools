@@ -70,6 +70,7 @@ endif()
 add_library(libadb STATIC ${libadb_SOURCES})
 target_compile_definitions(libadb PRIVATE -D_GNU_SOURCE)
 target_compile_definitions(libadb PUBLIC -DADB_HOST=1)
+target_compile_definitions(libadb PUBLIC ANDROID_TOOLS_DISABLE_MDNS=1)
 target_include_directories(libadb PUBLIC
 	boringssl/include
 	adb
@@ -100,7 +101,7 @@ if(ANDROID_TOOLS_TERMUX_ADB)
 	target_link_libraries(libadb "${TERMUXADB_STATIC_LIB}")
 endif()
 
-if(ANDROID_TOOLS_TERMUX_ADB AND NOT TARGET libzip)
+if(NOT TARGET libzip)
 	add_library(libzip STATIC
 		libziparchive/zip_archive.cc
 		libziparchive/zip_archive_stream_entry.cc
